@@ -54,6 +54,17 @@ let budgetController = (() => {
             return newItem;
         },
 
+        deleteItem: (type, id) => { //91
+            let ids, index;
+            ids =  data.allItems[type].map((cur) => {
+                return cur.id;
+            });
+            index = ids.indexOf(id);  
+            if (index !== -1) {
+                data.allItems[type].splice(index, 1);
+            }
+        },
+
         calculateBudget: () =>{
             calculateTotal('exp');
             calculateTotal('inc');
@@ -84,7 +95,7 @@ let budgetController = (() => {
 
 
 
-//**UI CONTROLLER */
+//********************************************************UI CONTROLLER */
 let UIController = (() => {
     //CHANGED SELECTOR FOR CONVENIENCE 
     const DOMstrings = {
@@ -94,8 +105,12 @@ let UIController = (() => {
         inputBtn: '.add__btn',
         incomeContainer: '.income__list',
         expensesContainer: '.expenses__list',
+        budgetLabel: '.budget__value',
+        incomeLabel: '.budget__income--value',
+        expensesLabel: '.budget__expenses--value',
+        percentageLabel: '.budget__expenses--percentage',
+        container: '.container'
     };
-
 
     //ALL PUBLIC METHODS
     return {
@@ -124,6 +139,12 @@ let UIController = (() => {
             document.querySelector(element).insertAdjacentHTML('beforeend', newHtml);
 
         },
+
+        deleteListItem: (selectorID) => {
+            let el = document.getElementById(selectorID) 
+            el.parentNode.removeChild(el);
+        },
+
         //WILL CLEAR INPUT FIELDS AFTER EACH USE
         clearFields: () => {
             let fields, fieldsArr;
@@ -134,6 +155,17 @@ let UIController = (() => {
             });
             fieldsArr[0].focus();
         },
+        displayBudget: (obj) =>{  //87
+            document.querySelector(DOMstrings.budgetLabel).textContent = obj.budget; //takes
+            document.querySelector(DOMstrings.incomeLabel).textContent = obj.totalInc;  //all
+            document.querySelector(DOMstrings.expensesLabel).textContent = obj.totalExp; //value
+            if (obj.percentage > 0) {
+                document.querySelector(DOMstrings.percentageLabel).textContent = obj.percentage + '%'; //getBudget()
+            } else {
+                document.querySelector(DOMstrings.percentageLabel).textContent = '---';
+            }
+            
+        },
         getDOMstrings: () => {
             return DOMstrings; //TO PASS IT OUTSIDE THE MODULE MUST RETURN 
         }
@@ -143,7 +175,8 @@ let UIController = (() => {
 
 //**MAIN CONTROLLER */
 let controller = ((budgetCtrl, UICtrl) => {
-    let setupEventListeners = () => {
+    let setupEventListeners = () => { 
+        //in this function we take all data from UICtrl.DOMstrings 
         let DOM = UICtrl.getDOMstrings();
         document.querySelector(DOM.inputBtn).addEventListener('click', ctrlAddItem);
         document.addEventListener('keypress', (e) => {
@@ -151,13 +184,14 @@ let controller = ((budgetCtrl, UICtrl) => {
                 ctrlAddItem(); //this will fire if button is clicked or ENTER pressed
             }
         });
+        document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem);
     };
 
     let updateBudget = () => {
         budgetCtrl.calculateBudget();
         let budget = budgetCtrl.getBudget();
-        console.log(budget);
-    }
+        UICtrl.displayBudget(budget);
+    };
 
     //getDOMstrings is called DOM here in this module
     //ctrlAddItem is fired then somebody hit's enter or add button
@@ -170,12 +204,32 @@ let controller = ((budgetCtrl, UICtrl) => {
             UICtrl.addListItem(newItem, input.type);
             UICtrl.clearFields();
             updateBudget();
+
         }
     };
+
+    let ctrlDeleteItem = (even) =>{ //90
+        let itemID, splitID, type, ID;
+        itemID = event.target.parentNode.parentNode.parentNode.parentNode.id;
+        if (itemID) {
+            splitID = itemID.split('-'); 
+            type = splitID[0];
+            ID =  parseInt(splitID[1]);
+            budgetCtrl.deleteItem(type, ID);
+            UICtrl.deleteListItem(itemID);
+            updateBudget();
+        }
+    }
 
     return {
         init: () => {
             console.log('event started');
+            UICtrl.displayBudget({
+                budget: 0,
+                totalInc: 0,
+                totalExp: 0,
+                percentage: -1
+            });
             setupEventListeners();
         }
     };
